@@ -19,6 +19,7 @@ from features.pdf_to_word import pdf_to_word_bp
 from features.word_to_pdf import word_to_pdf_bp
 from features.flatten import flatten_bp
 from features.ocr import ocr_bp
+from features.compress import compress_bp
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = os.path.abspath('uploads')
@@ -53,6 +54,7 @@ app.register_blueprint(pdf_to_word_bp, url_prefix='/pdf-to-word')
 app.register_blueprint(word_to_pdf_bp, url_prefix='/word-to-pdf')
 app.register_blueprint(flatten_bp, url_prefix='/flatten')
 app.register_blueprint(ocr_bp, url_prefix='/ocr')
+app.register_blueprint(compress_bp, url_prefix='/compress')
 
 # Tools definitions
 TOOLS = [
@@ -66,6 +68,7 @@ TOOLS = [
     {'id': 'word-to-pdf', 'name': 'Word to PDF', 'desc': 'Make DOC and DOCX files easy to read by converting them to PDF.', 'icon': 'word-to-pdf-icon', 'route': '/word-to-pdf'},
     {'id': 'flatten', 'name': 'Flatten PDF', 'desc': 'Render pages as images, making text unselectable.', 'icon': 'flatten-icon', 'route': '/flatten'},
     {'id': 'ocr', 'name': 'OCR PDF', 'desc': 'Make a scanned PDF searchable by creating a text layer.', 'icon': 'ocr-icon', 'route': '/ocr'},
+    {'id': 'compress', 'name': 'Compress PDF', 'desc': 'Reduce the file size of your PDF while maintaining quality.', 'icon': 'compress-icon', 'route': '/compress'},
 ]
 
 @app.route('/')
