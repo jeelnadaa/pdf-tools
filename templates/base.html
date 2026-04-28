@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PDF Tools{% endblock %}</title>
+    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@900,700,500,300,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="/" class="logo">
+                <i class="ph ph-files"></i>
+                PDF Tools
+            </a>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/merge">Merge</a>
+                <a href="/split">Split</a>
+                <a href="/extract">Extract</a>
+                <a href="/protect">Protect</a>
+                <a href="/pdf-to-image">PDF to Image</a>
+                <a href="/image-to-pdf">Image to PDF</a>
+                <a href="/pdf-to-word">PDF to Word</a>
+                <a href="/word-to-pdf">Word to PDF</a>
+                <a href="/flatten">Flatten</a>
+                <a href="/ocr">OCR</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <div class="container" style="display: flex; justify-content: space-between; align-items: center;">
+            <p>&copy; 2026 PDF Tools.</p>
+            <button id="admin-clear-btn" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.5rem 1rem;">
+                <i class="ph ph-trash" style="margin-right: 5px;"></i> Admin: Clear All Cache
+            </button>
+        </div>
+    </footer>
+
+    <!-- Custom Modal -->
+    <div class="modal-overlay" id="custom-modal">
+        <div class="modal-card">
+            <i class="ph ph-warning-circle modal-icon" id="modal-icon"></i>
+            <h3 class="modal-title" id="modal-title">Confirm</h3>
+            <p class="modal-message" id="modal-message">Are you sure?</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
+                <button class="btn btn-primary" id="modal-confirm" style="background: #ff3b30;">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Auth Modal -->
+    <div class="modal-overlay" id="admin-modal">
+        <div class="modal-card">
+            <i class="ph ph-lock-key modal-icon" style="color: #000;"></i>
+            <h3 class="modal-title">Admin Authentication</h3>
+            <p class="modal-message">Enter the 4-digit admin password to clear all server cache.</p>
+            <input type="password" id="admin-password-input" class="input-field" placeholder="Password" style="margin-bottom: 1.5rem; text-align: center;">
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="admin-cancel">Cancel</button>
+                <button class="btn btn-primary" id="admin-confirm" style="background: #ff3b30;">Clear Cache</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Modal -->
+    <div class="modal-overlay" id="alert-modal">
+        <div class="modal-card">
+            <i class="ph ph-info modal-icon" id="alert-icon" style="color: var(--text-color);"></i>
+            <h3 class="modal-title" id="alert-title">Alert</h3>
+            <p class="modal-message" id="alert-message">Message</p>
+            <div class="modal-actions">
+                <button class="btn btn-primary" id="alert-ok">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

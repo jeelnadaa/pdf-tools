@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - PDF Tools{% endblock %}
+
+{% block content %}
+<div class="tool-header">
+    <h1>{{ title }}</h1>
+    <p>{{ desc }}</p>
+</div>
+
+{% if tool_id == 'ocr' and not tesseract_installed %}
+<div class="alert warning">
+    <i class="ph ph-warning"></i>
+    <div class="alert-content">
+        <h3>Tesseract OCR Not Found</h3>
+        <p>To use the OCR feature, you must have Tesseract OCR installed on your system. Please install it and restart the application.</p>
+    </div>
+</div>
+{% else %}
+<div class="upload-container" id="upload-container">
+    <form id="tool-form" enctype="multipart/form-data">
+        <div class="drop-zone" id="drop-zone">
+            <i class="ph ph-upload-simple"></i>
+            <h3>Select PDF files</h3>
+            <p>or drop PDFs here</p>
+            <input type="file" id="file-input" name="{% if multiple %}files{% else %}file{% endif %}" accept="{{ accept }}" {% if multiple %}multiple{% endif %} hidden>
+            <button type="button" class="btn btn-primary" onclick="document.getElementById('file-input').click()">Select Files</button>
+        </div>
+
+        <div class="selected-files" id="selected-files" style="display: none;">
+            <ul id="file-list"></ul>
+            
+            {% if needs_password %}
+            <div class="extra-inputs">
+                <input type="password" name="password" placeholder="Enter password to encrypt PDF" required class="input-field">
+            </div>
+            {% endif %}
+            
+            {% if needs_pages %}
+            <div class="extra-inputs">
+                <input type="text" name="pages" placeholder="e.g. 1, 3, 5-7" required class="input-field">
+                <small>Enter page numbers and/or page ranges separated by commas.</small>
+            </div>
+            {% endif %}
+
+            <div class="actions">
+                <button type="submit" class="btn btn-primary btn-large">
+                    {% if tool_id == 'merge' %}Merge PDFs
+                    {% elif tool_id == 'split' %}Split PDF
+                    {% elif tool_id == 'extract' %}Extract Pages
+                    {% elif tool_id == 'protect' %}Protect PDF
+                    {% elif tool_id == 'pdf-to-image' %}Convert to Image
+                    {% elif tool_id == 'image-to-pdf' %}Convert to PDF
+                    {% elif tool_id == 'pdf-to-word' %}Convert to Word
+                    {% elif tool_id == 'word-to-pdf' %}Convert to PDF
+                    {% elif tool_id == 'flatten' %}Flatten PDF
+                    {% elif tool_id == 'ocr' %}OCR PDF
+                    {% endif %}
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="progress-container" id="progress-container" style="display: none;">
+    <h3 id="progress-title">Uploading...</h3>
+    <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progress-fill"></div>
+    </div>
+    <p id="progress-status" class="progress-status">0%</p>
+    <div class="spinner" id="processing-spinner" style="display: none;"></div>
+</div>
+
+<div class="success-container" id="success-container" style="display: none;">
+    <i class="ph ph-check-circle success-icon"></i>
+    <h3>Task Complete!</h3>
+    <p>Your document has been successfully processed.</p>
+    <div style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 2rem;">
+        <a href="#" id="download-btn" class="btn btn-primary btn-large">Download File</a>
+        <button id="delete-cache-btn" class="btn btn-secondary btn-large" style="color: #ff3b30; border-color: #ff3b30;">Delete from Cache</button>
+    </div>
+    <a href="{{ url_for((tool_id|replace('-', '_')) ~ '.' ~ (tool_id|replace('-', '_'))) }}" class="btn btn-secondary">Process Another</a>
+</div>
+{% endif %}
+
+<script>
+    const toolRoute = "{{ url_for((tool_id|replace('-', '_')) ~ '.' ~ (tool_id|replace('-', '_'))) }}";
+</script>
+{% endblock %}

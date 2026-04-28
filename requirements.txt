@@ -1,0 +1,9 @@
+Flask
+Werkzeug
+pymupdf
+pdf2docx
+docx2pdf
+pytesseract
+pdf2image
+Pillow
+python-dotenv

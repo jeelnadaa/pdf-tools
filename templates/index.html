@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="hero">
+    <h1>Every tool you need to work with PDFs in one place</h1>
+    <p>All are 100% FREE and easy to use! Merge, split, compress, convert, rotate, unlock and watermark PDFs with just a few clicks.</p>
+</section>
+
+<div class="tools-grid">
+    {% for tool in tools %}
+        <a href="{{ tool.route }}" class="tool-card">
+            <div class="tool-icon">
+                {% if tool.id == 'merge' %}<i class="ph ph-intersect"></i>{% endif %}
+                {% if tool.id == 'split' %}<i class="ph ph-scissors"></i>{% endif %}
+                {% if tool.id == 'extract' %}<i class="ph ph-files"></i>{% endif %}
+                {% if tool.id == 'protect' %}<i class="ph ph-lock-key"></i>{% endif %}
+                {% if tool.id == 'pdf-to-image' %}<i class="ph ph-image"></i>{% endif %}
+                {% if tool.id == 'image-to-pdf' %}<i class="ph ph-file-pdf"></i>{% endif %}
+                {% if tool.id == 'pdf-to-word' %}<i class="ph ph-file-doc"></i>{% endif %}
+                {% if tool.id == 'word-to-pdf' %}<i class="ph ph-file-pdf"></i>{% endif %}
+                {% if tool.id == 'flatten' %}<i class="ph ph-layers-slash"></i>{% endif %}
+                {% if tool.id == 'ocr' %}<i class="ph ph-text-t"></i>{% endif %}
+            </div>
+            <h2>{{ tool.name }}</h2>
+            <p>{{ tool.desc }}</p>
+        </a>
+    {% endfor %}
+</div>
+{% endblock %}
