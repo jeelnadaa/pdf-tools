@@ -16,13 +16,21 @@
         <p>To use the OCR feature, you must have Tesseract OCR installed on your system. Please install it and restart the application.</p>
     </div>
 </div>
+{% elif tool_id == 'word-to-pdf' and not word_installed %}
+<div class="alert warning">
+    <i class="ph ph-warning"></i>
+    <div class="alert-content">
+        <h3>Microsoft Word Not Found</h3>
+        <p>To use the Word conversion features, Microsoft Word must be installed on the server machine running this application.</p>
+    </div>
+</div>
 {% else %}
 <div class="upload-container" id="upload-container">
     <form id="tool-form" enctype="multipart/form-data">
         <div class="drop-zone" id="drop-zone">
             <i class="ph ph-upload-simple"></i>
-            <h3>Select PDF files</h3>
-            <p>or drop PDFs here</p>
+            <h3>Select files</h3>
+            <p>or drop files here</p>
             <input type="file" id="file-input" name="{% if multiple %}files{% else %}file{% endif %}" accept="{{ accept }}" {% if multiple %}multiple{% endif %} hidden>
             <button type="button" class="btn btn-primary" onclick="document.getElementById('file-input').click()">Select Files</button>
         </div>
@@ -43,6 +51,32 @@
             </div>
             {% endif %}
 
+            {% if tool_id in ['compress', 'compress-image'] %}
+            <div class="extra-inputs" id="compression-controls" style="text-align: left; background: var(--hover-bg); padding: 1.5rem; border-radius: var(--radius); margin-bottom: 2rem;">
+                <h4 style="margin-bottom: 1rem;">Compression Level</h4>
+                <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                    <label><input type="radio" name="quality_preset" value="low"> Low (Best Quality)</label>
+                    <label><input type="radio" name="quality_preset" value="medium" checked> Medium</label>
+                    <label><input type="radio" name="quality_preset" value="high"> High (Smallest Size)</label>
+                    <label><input type="radio" name="quality_preset" value="custom"> Custom</label>
+                </div>
+                
+                <div id="slider-container" style="display: none; margin-bottom: 1rem;">
+                    <input type="range" id="quality-slider" name="quality_slider" min="1" max="100" value="50" style="width: 100%;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <small>Lowest Quality</small>
+                        <small id="slider-val-display">50</small>
+                        <small>Best Quality</small>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                    <strong>Estimated Final Size: </strong>
+                    <span id="est-size" style="color: var(--primary-color); font-weight: bold; font-size: 1.1rem;">Calculating...</span>
+                </div>
+            </div>
+            {% endif %}
+
             <div class="actions">
                 <button type="submit" class="btn btn-primary btn-large">
                     {% if tool_id == 'merge' %}Merge PDFs
@@ -56,6 +90,7 @@
                     {% elif tool_id == 'flatten' %}Flatten PDF
                     {% elif tool_id == 'ocr' %}OCR PDF
                     {% elif tool_id == 'compress' %}Compress PDF
+                    {% elif tool_id == 'compress-image' %}Compress Image
                     {% endif %}
                 </button>
             </div>

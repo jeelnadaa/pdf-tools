@@ -148,6 +148,66 @@ document.addEventListener('DOMContentLoaded', () => {
         handleFiles();
     }
 
+    let draftJobId = null;
+    let estimateTimeout = null;
+
+    // Listen to compression controls
+    const compRadios = document.querySelectorAll('input[name="quality_preset"]');
+    const compSlider = document.getElementById('quality-slider');
+    const sliderContainer = document.getElementById('slider-container');
+    const sliderValDisplay = document.getElementById('slider-val-display');
+    const estSizeDisplay = document.getElementById('est-size');
+
+    function formatBytes(bytes, decimals = 2) {
+        if (!+bytes) return '0 Bytes';
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+    }
+
+    function estimateSize() {
+        if (!draftJobId) return;
+        estSizeDisplay.textContent = 'Calculating...';
+        
+        let preset = document.querySelector('input[name="quality_preset"]:checked').value;
+        let quality = compSlider ? compSlider.value : 50;
+        
+        // The URL depends on which tool is active. We can parse it from toolRoute
+        // e.g. toolRoute is /compress-image/ or /compress/
+        let estimateUrl = toolRoute + 'estimate/' + draftJobId + '?preset=' + preset + '&quality=' + quality;
+        
+        fetch(estimateUrl)
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    estSizeDisplay.textContent = formatBytes(data.estimated_size);
+                } else {
+                    estSizeDisplay.textContent = 'Error';
+                }
+            }).catch(() => estSizeDisplay.textContent = 'Error');
+    }
+
+    if (compRadios.length > 0) {
+        compRadios.forEach(r => r.addEventListener('change', (e) => {
+            if (e.target.value === 'custom') {
+                sliderContainer.style.display = 'block';
+            } else {
+                sliderContainer.style.display = 'none';
+            }
+            estimateSize();
+        }));
+    }
+
+    if (compSlider) {
+        compSlider.addEventListener('input', (e) => {
+            sliderValDisplay.textContent = e.target.value;
+            clearTimeout(estimateTimeout);
+            estimateTimeout = setTimeout(estimateSize, 300);
+        });
+    }
+
     function handleFiles() {
         const files = fileInput.files;
         if (files.length === 0) return;
@@ -161,6 +221,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
         dropZone.style.display = 'none';
         selectedFilesContainer.style.display = 'block';
+
+        // Draft upload logic for compression tools
+        const isCompressionTool = toolRoute.includes('compress');
+        if (isCompressionTool) {
+            const formData = new FormData();
+            for(let i = 0; i < files.length; i++) {
+                formData.append(fileInput.name, files[i]);
+            }
+            
+            fetch(toolRoute + 'draft', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    draftJobId = data.job_id;
+                    estimateSize();
+                } else {
+                    alert("Failed to create draft: " + data.error);
+                }
+            })
+            .catch(err => console.error("Draft error:", err));
+        }
     }
 
     if(toolForm) {
@@ -170,10 +254,26 @@ document.addEventListener('DOMContentLoaded', () => {
             uploadContainer.style.display = 'none';
             progressContainer.style.display = 'block';
             
+            const isCompressionTool = toolRoute.includes('compress');
             const formData = new FormData(toolForm);
             
             const xhr = new XMLHttpRequest();
-            xhr.open('POST', toolRoute, true);
+            
+            if (isCompressionTool) {
+                if (!draftJobId) {
+                    alert("Still preparing file. Please try again in a second.");
+                    location.reload();
+                    return;
+                }
+                xhr.open('POST', toolRoute + 'process/' + draftJobId, true);
+                // We don't upload the file again, just the form data (quality settings)
+                // Remove the file from formData to save bandwidth
+                formData.delete('file');
+                formData.delete('files');
+            } else {
+                xhr.open('POST', toolRoute, true);
+            }
+            
             xhr.responseType = 'json';
 
             xhr.upload.addEventListener('progress', (e) => {

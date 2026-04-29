@@ -18,8 +18,10 @@
                 {% if tool.id == 'image-to-pdf' %}<i class="ph ph-file-pdf"></i>{% endif %}
                 {% if tool.id == 'pdf-to-word' %}<i class="ph ph-file-doc"></i>{% endif %}
                 {% if tool.id == 'word-to-pdf' %}<i class="ph ph-file-pdf"></i>{% endif %}
-                {% if tool.id == 'flatten' %}<i class="ph ph-layers-slash"></i>{% endif %}
+                {% if tool.id == 'flatten' %}<i class="ph ph-stamp"></i>{% endif %}
                 {% if tool.id == 'ocr' %}<i class="ph ph-text-t"></i>{% endif %}
+                {% if tool.id == 'compress' %}<i class="ph ph-file-zip"></i>{% endif %}
+                {% if tool.id == 'compress-image' %}<i class="ph ph-file-image"></i>{% endif %}
             </div>
             <h2>{{ tool.name }}</h2>
             <p>{{ tool.desc }}</p>

@@ -1,3 +1,5 @@
 env/
 .env
 features/__pycache__/
+uploads/
+processed/

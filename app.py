@@ -20,6 +20,7 @@ from features.word_to_pdf import word_to_pdf_bp
 from features.flatten import flatten_bp
 from features.ocr import ocr_bp
 from features.compress import compress_bp
+from features.compress_image import compress_image_bp
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = os.path.abspath('uploads')
@@ -38,10 +39,38 @@ def is_tesseract_installed():
     except FileNotFoundError:
         return False
 
+_WORD_INSTALLED = None
+# Check if MS Word is installed (for word-to-pdf)
+def is_word_installed():
+    global _WORD_INSTALLED
+    if _WORD_INSTALLED is not None:
+        return _WORD_INSTALLED
+        
+    import platform
+    if platform.system() == 'Windows':
+        try:
+            import pythoncom
+            pythoncom.CoInitialize()
+            import win32com.client
+            # Just check if we can instantiate it, then quit
+            word = win32com.client.Dispatch("Word.Application")
+            word.Quit()
+            _WORD_INSTALLED = True
+            return True
+        except:
+            _WORD_INSTALLED = False
+            return False
+            
+    _WORD_INSTALLED = False
+    return False
+
 # Pass to all templates
 @app.context_processor
-def inject_tesseract_status():
-    return dict(tesseract_installed=is_tesseract_installed())
+def inject_status():
+    return dict(
+        tesseract_installed=is_tesseract_installed(),
+        word_installed=is_word_installed()
+    )
 
 # Register blueprints
 app.register_blueprint(merge_bp, url_prefix='/merge')
@@ -55,6 +84,7 @@ app.register_blueprint(word_to_pdf_bp, url_prefix='/word-to-pdf')
 app.register_blueprint(flatten_bp, url_prefix='/flatten')
 app.register_blueprint(ocr_bp, url_prefix='/ocr')
 app.register_blueprint(compress_bp, url_prefix='/compress')
+app.register_blueprint(compress_image_bp, url_prefix='/compress-image')
 
 # Tools definitions
 TOOLS = [
@@ -69,6 +99,7 @@ TOOLS = [
     {'id': 'flatten', 'name': 'Flatten PDF', 'desc': 'Render pages as images, making text unselectable.', 'icon': 'flatten-icon', 'route': '/flatten'},
     {'id': 'ocr', 'name': 'OCR PDF', 'desc': 'Make a scanned PDF searchable by creating a text layer.', 'icon': 'ocr-icon', 'route': '/ocr'},
     {'id': 'compress', 'name': 'Compress PDF', 'desc': 'Reduce the file size of your PDF while maintaining quality.', 'icon': 'compress-icon', 'route': '/compress'},
+    {'id': 'compress-image', 'name': 'Compress Image', 'desc': 'Reduce image file size with exact quality control.', 'icon': 'compress-image-icon', 'route': '/compress-image'},
 ]
 
 @app.route('/')
