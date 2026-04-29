@@ -14,6 +14,8 @@ A beautiful, sleek, and high-performance minimalist web application to manipulat
 8. **Word to PDF:** Convert a Word document (`.docx`) into a standard PDF.
 9. **Flatten PDF:** Renders pages as images, making text unselectable.
 10. **OCR PDF:** Scans a flattened PDF and adds a text layer making it searchable.
+11. **Compress PDF:** Reduce PDF file sizes with customizable quality profiles.
+12. **Compress Image:** Optimize and compress individual images instantly.
 
 ## Architecture
 
@@ -46,8 +48,21 @@ This app uses a modular structure with **Flask Blueprints**. Every feature has i
 
 ## Running the App
 
-To start the server, simply run:
+To start the server locally, simply run:
 ```bash
 python app.py
 ```
 Then, open your browser and navigate to `http://127.0.0.1:5000/`.
+
+## Deployment (Render.com)
+
+The application is completely stateless and utilizes user browser storage (IndexedDB), making it perfectly suited for free-tier deployments.
+
+1. Connect your GitHub repository to [Render.com](https://render.com/).
+2. Create a new **Web Service**.
+3. Set the **Build Command**: `pip install -r requirements.txt`
+4. Set the **Start Command**: `gunicorn app:app`
+5. In the **Environment Variables** section, add `ADMIN_PASSWORD` and set it to your secret password (used for the `Ctrl+Shift+X` server clear command).
+6. Deploy!
+
+*(Note: The free tier of Render runs on Linux. Windows-only libraries like `docx2pdf` will be gracefully disabled in the UI automatically).*
