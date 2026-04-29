@@ -285,6 +285,9 @@ main { flex-grow: 1; padding: 4rem 0; }
     pointer-events: none;
     transition: opacity 0.2s ease;
 }
+#custom-modal, #alert-modal {
+    z-index: 1050;
+}
 .modal-overlay.active {
     opacity: 1;
     pointer-events: all;

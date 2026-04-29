@@ -113,7 +113,6 @@
     <p>Your document has been successfully processed.</p>
     <div style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 2rem;">
         <a href="#" id="download-btn" class="btn btn-primary btn-large">Download File</a>
-        <button id="delete-cache-btn" class="btn btn-secondary btn-large" style="color: #ff3b30; border-color: #ff3b30;">Delete from Cache</button>
     </div>
     <a href="{{ url_for((tool_id|replace('-', '_')) ~ '.' ~ (tool_id|replace('-', '_'))) }}" class="btn btn-secondary">Process Another</a>
 </div>

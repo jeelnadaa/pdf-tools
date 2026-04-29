@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
         modal.classList.add('active');
         
         const okBtn = document.getElementById('alert-ok');
-        // Remove old listeners
         const newOkBtn = okBtn.cloneNode(true);
         okBtn.parentNode.replaceChild(newOkBtn, okBtn);
         
@@ -26,7 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const confirmBtn = document.getElementById('modal-confirm');
         const cancelBtn = document.getElementById('modal-cancel');
         
-        // Remove old listeners
         const newConfirmBtn = confirmBtn.cloneNode(true);
         const newCancelBtn = cancelBtn.cloneNode(true);
         confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
@@ -43,10 +41,172 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // --- End Custom Modal Logic ---
 
-    // --- Admin Clear Cache Logic (Runs on ALL pages) ---
-    const adminClearBtn = document.getElementById('admin-clear-btn');
-    if (adminClearBtn) {
-        adminClearBtn.addEventListener('click', (e) => {
+    // --- IndexedDB Logic ---
+    const DB_NAME = 'pdf_tools_history';
+    const DB_VERSION = 1;
+    const STORE_NAME = 'files';
+
+    function openDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => resolve(request.result);
+            request.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                }
+            };
+        });
+    }
+
+    function saveToHistory(record) {
+        return openDB().then(db => {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                store.put(record);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        });
+    }
+
+    function getAllHistory() {
+        return openDB().then(db => {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const store = tx.objectStore(STORE_NAME);
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result.sort((a,b) => b.timestamp - a.timestamp));
+                request.onerror = () => reject(request.error);
+            });
+        });
+    }
+
+    function deleteHistory(id) {
+        return openDB().then(db => {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                store.delete(id);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        });
+    }
+
+    function clearAllHistory() {
+        return openDB().then(db => {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                store.clear();
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        });
+    }
+    
+    function formatBytes(bytes, decimals = 2) {
+        if (!+bytes) return '0 Bytes';
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+    }
+
+    // --- History UI Logic ---
+    const historyModal = document.getElementById('history-modal');
+    const openHistoryBtn = document.getElementById('open-history-btn');
+    const closeHistoryBtn = document.getElementById('history-close-btn');
+    const clearHistoryBtn = document.getElementById('clear-history-btn');
+    const historyList = document.getElementById('history-list');
+
+    function renderHistory() {
+        getAllHistory().then(records => {
+            historyList.innerHTML = '';
+            if (records.length === 0) {
+                historyList.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No history found.</p>';
+                return;
+            }
+            
+            records.forEach(record => {
+                const item = document.createElement('div');
+                item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid var(--border-color);';
+                
+                const info = document.createElement('div');
+                const date = new Date(record.timestamp).toLocaleString();
+                info.innerHTML = `<strong>${record.toolName.toUpperCase()}</strong><br>
+                                  <small>${record.filename} (${formatBytes(record.blob.size)})</small><br>
+                                  <small style="color: var(--text-secondary);">${date}</small>`;
+                
+                const actions = document.createElement('div');
+                actions.style.cssText = 'display: flex; gap: 0.5rem;';
+                
+                const dlBtn = document.createElement('button');
+                dlBtn.className = 'btn btn-primary';
+                dlBtn.style.padding = '0.5rem';
+                dlBtn.innerHTML = '<i class="ph ph-download-simple"></i>';
+                dlBtn.onclick = () => {
+                    try {
+                        const url = URL.createObjectURL(record.blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = record.filename;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                    } catch (e) {
+                        showCustomAlert("Error", "File not found or corrupted in browser storage.");
+                    }
+                };
+                
+                const delBtn = document.createElement('button');
+                delBtn.className = 'btn btn-secondary';
+                delBtn.style.padding = '0.5rem';
+                delBtn.innerHTML = '<i class="ph ph-trash" style="color: #ff3b30;"></i>';
+                delBtn.onclick = () => {
+                    showCustomConfirm("Delete History", "Remove this file from your browser history?", () => {
+                        deleteHistory(record.id).then(() => renderHistory());
+                    });
+                };
+                
+                actions.appendChild(dlBtn);
+                actions.appendChild(delBtn);
+                item.appendChild(info);
+                item.appendChild(actions);
+                historyList.appendChild(item);
+            });
+        });
+    }
+
+    if (openHistoryBtn) {
+        openHistoryBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            renderHistory();
+            historyModal.classList.add('active');
+        });
+    }
+
+    if (closeHistoryBtn) {
+        closeHistoryBtn.addEventListener('click', () => {
+            historyModal.classList.remove('active');
+        });
+    }
+
+    if (clearHistoryBtn) {
+        clearHistoryBtn.addEventListener('click', () => {
+            showCustomConfirm("Clear All History", "Are you sure you want to permanently delete all stored files from your browser?", () => {
+                clearAllHistory().then(() => renderHistory());
+            });
+        });
+    }
+
+    // --- Admin Clear Cache Logic (Secret Shortcut) ---
+    document.addEventListener('keydown', (e) => {
+        // Trigger on Ctrl + Shift + X (or Cmd + Shift + X)
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'x') {
             e.preventDefault();
             const modal = document.getElementById('admin-modal');
             const passInput = document.getElementById('admin-password-input');
@@ -68,8 +228,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
                 
-                adminClearBtn.textContent = 'Clearing...';
-                close();
+                const originalText = confirmBtn.textContent;
+                confirmBtn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Clearing...';
                 
                 fetch('/admin/clear-all', { 
                     method: 'POST',
@@ -80,20 +240,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
                 .then(res => res.json())
                 .then(data => {
+                    close();
+                    confirmBtn.textContent = originalText;
                     if (data.status === 'success') {
                         showCustomAlert('Success', data.message);
                     } else {
                         showCustomAlert('Error', data.message);
                     }
-                    adminClearBtn.innerHTML = '<i class="ph ph-trash" style="margin-right: 5px;"></i> Admin: Clear All Cache';
                 })
                 .catch(err => {
+                    close();
+                    confirmBtn.textContent = originalText;
                     showCustomAlert('Error', 'Network Error: ' + err);
-                    adminClearBtn.innerHTML = '<i class="ph ph-trash" style="margin-right: 5px;"></i> Admin: Clear All Cache';
                 });
             };
-        });
-    }
+        }
+    });
     // --- End Admin Logic ---
 
     const dropZone = document.getElementById('drop-zone');
@@ -110,17 +272,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const progressStatus = document.getElementById('progress-status');
     const progressTitle = document.getElementById('progress-title');
     const processingSpinner = document.getElementById('processing-spinner');
-    
     const downloadBtn = document.getElementById('download-btn');
-    const deleteCacheBtn = document.getElementById('delete-cache-btn');
     
-    let currentJobId = null;
-
     // Early return if not on a tool page
     if (!dropZone) return;
 
     // --- Tool Page Logic ---
-    // Drag and Drop handlers
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         dropZone.addEventListener(eventName, preventDefaults, false);
     });
@@ -143,29 +300,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleDrop(e) {
         const dt = e.dataTransfer;
-        const files = dt.files;
-        fileInput.files = files;
+        fileInput.files = dt.files;
         handleFiles();
     }
 
     let draftJobId = null;
     let estimateTimeout = null;
 
-    // Listen to compression controls
     const compRadios = document.querySelectorAll('input[name="quality_preset"]');
     const compSlider = document.getElementById('quality-slider');
     const sliderContainer = document.getElementById('slider-container');
     const sliderValDisplay = document.getElementById('slider-val-display');
     const estSizeDisplay = document.getElementById('est-size');
-
-    function formatBytes(bytes, decimals = 2) {
-        if (!+bytes) return '0 Bytes';
-        const k = 1024;
-        const dm = decimals < 0 ? 0 : decimals;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
-    }
 
     function estimateSize() {
         if (!draftJobId) return;
@@ -174,8 +320,6 @@ document.addEventListener('DOMContentLoaded', () => {
         let preset = document.querySelector('input[name="quality_preset"]:checked').value;
         let quality = compSlider ? compSlider.value : 50;
         
-        // The URL depends on which tool is active. We can parse it from toolRoute
-        // e.g. toolRoute is /compress-image/ or /compress/
         let estimateUrl = toolRoute + 'estimate/' + draftJobId + '?preset=' + preset + '&quality=' + quality;
         
         fetch(estimateUrl)
@@ -222,7 +366,6 @@ document.addEventListener('DOMContentLoaded', () => {
         dropZone.style.display = 'none';
         selectedFilesContainer.style.display = 'block';
 
-        // Draft upload logic for compression tools
         const isCompressionTool = toolRoute.includes('compress');
         if (isCompressionTool) {
             const formData = new FormData();
@@ -240,7 +383,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     draftJobId = data.job_id;
                     estimateSize();
                 } else {
-                    alert("Failed to create draft: " + data.error);
+                    showCustomAlert("Error", "Failed to create draft: " + data.error);
                 }
             })
             .catch(err => console.error("Draft error:", err));
@@ -256,18 +399,14 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const isCompressionTool = toolRoute.includes('compress');
             const formData = new FormData(toolForm);
-            
             const xhr = new XMLHttpRequest();
             
             if (isCompressionTool) {
                 if (!draftJobId) {
-                    alert("Still preparing file. Please try again in a second.");
-                    location.reload();
+                    showCustomAlert("Wait", "Still preparing file. Please try again in a second.", () => location.reload());
                     return;
                 }
                 xhr.open('POST', toolRoute + 'process/' + draftJobId, true);
-                // We don't upload the file again, just the form data (quality settings)
-                // Remove the file from formData to save bandwidth
                 formData.delete('file');
                 formData.delete('files');
             } else {
@@ -293,13 +432,47 @@ document.addEventListener('DOMContentLoaded', () => {
             xhr.onload = function() {
                 if (this.status === 200 && this.response.status === 'success') {
                     const result = this.response;
-                    currentJobId = result.job_id;
                     
-                    downloadBtn.href = `/download/${result.job_id}/${result.filename}`;
-                    downloadBtn.download = result.filename; 
-
-                    progressContainer.style.display = 'none';
-                    successContainer.style.display = 'block';
+                    progressTitle.textContent = 'Saving to Browser...';
+                    progressStatus.textContent = 'Caching file locally';
+                    
+                    fetch(`/download/${result.job_id}/${result.filename}`)
+                        .then(res => {
+                            if (!res.ok) throw new Error("File not found");
+                            return res.blob();
+                        })
+                        .then(blob => {
+                            const recordId = Date.now().toString();
+                            const toolName = toolRoute.replace(/\//g, '') || 'tool';
+                            const originalName = fileInput.files[0] ? fileInput.files[0].name : 'unknown';
+                            
+                            const record = {
+                                id: recordId,
+                                timestamp: new Date().getTime(),
+                                toolName: toolName,
+                                originalFilename: originalName,
+                                filename: result.filename,
+                                blob: blob
+                            };
+                            
+                            saveToHistory(record).then(() => {
+                                // Delete from server immediately for statelessness
+                                fetch(`/delete/${result.job_id}`, { method: 'DELETE' });
+                                
+                                const url = URL.createObjectURL(blob);
+                                downloadBtn.href = url;
+                                downloadBtn.download = result.filename;
+                                
+                                progressContainer.style.display = 'none';
+                                successContainer.style.display = 'block';
+                            }).catch(() => {
+                                showCustomAlert("Error", "Failed to save to local history.");
+                            });
+                        })
+                        .catch(err => {
+                            showCustomAlert("Error", "Failed to download processed file: " + err);
+                        });
+                        
                 } else {
                     const msg = this.response ? this.response.error : 'Unknown error';
                     showCustomAlert("Error", msg, () => location.reload());
@@ -311,36 +484,6 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             xhr.send(formData);
-        });
-    }
-
-    if (deleteCacheBtn) {
-        deleteCacheBtn.addEventListener('click', () => {
-            if (!currentJobId) return;
-            
-            showCustomConfirm('Delete File', 'Are you sure you want to delete this file from the server cache?', () => {
-                deleteCacheBtn.textContent = 'Deleting...';
-                deleteCacheBtn.disabled = true;
-                
-                fetch(`/delete/${currentJobId}`, {
-                    method: 'DELETE'
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        showCustomAlert('Success', 'Files deleted from cache successfully!', () => location.reload());
-                    } else {
-                        showCustomAlert('Error', 'Error deleting cache: ' + data.message);
-                        deleteCacheBtn.textContent = 'Delete from Cache';
-                        deleteCacheBtn.disabled = false;
-                    }
-                })
-                .catch(err => {
-                    showCustomAlert('Error', 'Network Error: ' + err);
-                    deleteCacheBtn.textContent = 'Delete from Cache';
-                    deleteCacheBtn.disabled = false;
-                });
-            });
         });
     }
 });

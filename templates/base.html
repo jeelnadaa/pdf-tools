@@ -16,7 +16,7 @@
                 PDF Tools
             </a>
             <div class="nav-links">
-                <a href="/">Home</a>
+                <a href="#" id="open-history-btn">History</a>
                 <div class="dropdown">
                     <a href="#" class="dropdown-toggle" style="display: flex; align-items: center; gap: 0.25rem;"><i class="ph ph-list"></i> Tools</a>
                     <div class="dropdown-menu">
@@ -45,9 +45,6 @@
     <footer>
         <div class="container" style="display: flex; justify-content: space-between; align-items: center;">
             <p>&copy; 2026 PDF Tools.</p>
-            <button id="admin-clear-btn" class="btn btn-secondary" style="font-size: 0.85rem; padding: 0.5rem 1rem;">
-                <i class="ph ph-trash" style="margin-right: 5px;"></i> Admin: Clear All Cache
-            </button>
         </div>
     </footer>
 
@@ -69,11 +66,27 @@
         <div class="modal-card">
             <i class="ph ph-lock-key modal-icon" style="color: #000;"></i>
             <h3 class="modal-title">Admin Authentication</h3>
-            <p class="modal-message">Enter the 4-digit admin password to clear all server cache.</p>
+            <p class="modal-message">Enter the admin password to clear all server cache.</p>
             <input type="password" id="admin-password-input" class="input-field" placeholder="Password" style="margin-bottom: 1.5rem; text-align: center;">
             <div class="modal-actions">
                 <button class="btn btn-secondary" id="admin-cancel">Cancel</button>
                 <button class="btn btn-primary" id="admin-confirm" style="background: #ff3b30;">Clear Cache</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div class="modal-overlay" id="history-modal">
+        <div class="modal-card" style="max-width: 600px; text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 class="modal-title" style="margin: 0;"><i class="ph ph-clock-counter-clockwise"></i> Your History</h3>
+                <button class="btn btn-secondary" id="history-close-btn" style="padding: 0.5rem;"><i class="ph ph-x"></i></button>
+            </div>
+            <div id="history-list" style="max-height: 400px; overflow-y: auto; margin-bottom: 1.5rem;">
+                <!-- History items populated by JS -->
+            </div>
+            <div style="text-align: center; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+                <button class="btn btn-primary" id="clear-history-btn" style="background: #ff3b30;">Clear All History</button>
             </div>
         </div>
     </div>
