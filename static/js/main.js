@@ -273,6 +273,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const progressTitle = document.getElementById('progress-title');
     const processingSpinner = document.getElementById('processing-spinner');
     const downloadBtn = document.getElementById('download-btn');
+
+    let selectedFilesArray = [];
+    let sortableInstance = null;
     
     // Early return if not on a tool page
     if (!dropZone) return;
@@ -353,15 +356,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleFiles() {
-        const files = fileInput.files;
+        const files = Array.from(fileInput.files);
         if (files.length === 0) return;
 
-        fileList.innerHTML = '';
-        for (let i = 0; i < files.length; i++) {
-            const li = document.createElement('li');
-            li.innerHTML = `<span><i class="ph ph-file-pdf"></i> ${files[i].name}</span> <span>${(files[i].size / 1024 / 1024).toFixed(2)} MB</span>`;
-            fileList.appendChild(li);
+        const isMultiple = fileInput.hasAttribute('multiple');
+        
+        if (isMultiple) {
+            selectedFilesArray = [...selectedFilesArray, ...files];
+        } else {
+            selectedFilesArray = [files[0]];
         }
+        
+        renderFileList();
 
         dropZone.style.display = 'none';
         selectedFilesContainer.style.display = 'block';
@@ -369,9 +375,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const isCompressionTool = toolRoute.includes('compress');
         if (isCompressionTool) {
             const formData = new FormData();
-            for(let i = 0; i < files.length; i++) {
-                formData.append(fileInput.name, files[i]);
-            }
+            selectedFilesArray.forEach(file => {
+                formData.append(fileInput.name, file);
+            });
             
             fetch(toolRoute + 'draft', {
                 method: 'POST',
@@ -388,17 +394,107 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .catch(err => console.error("Draft error:", err));
         }
+        
+        // Reset file input so the same file can be added again if needed
+        fileInput.value = '';
     }
+
+    function renderFileList() {
+        fileList.innerHTML = '';
+        const isMultiple = fileInput.hasAttribute('multiple');
+
+        selectedFilesArray.forEach((file, index) => {
+            const li = document.createElement('li');
+            li.className = isMultiple ? 'draggable-item' : '';
+            li.dataset.index = index;
+            
+            let content = '';
+            if (isMultiple) {
+                content += `<div class="drag-handle"><i class="ph ph-dots-six-vertical"></i></div>`;
+            }
+            
+            content += `
+                <div style="flex-grow: 1; display: flex; justify-content: space-between; align-items: center;">
+                    <span><i class="ph ph-file-pdf"></i> ${file.name}</span>
+                    <span style="color: var(--text-secondary); font-size: 0.9rem;">${formatBytes(file.size)}</span>
+                </div>
+            `;
+            
+            if (isMultiple) {
+                content += `
+                    <button type="button" class="remove-file" onclick="event.stopPropagation(); removeFile(${index})">
+                        <i class="ph ph-trash"></i>
+                    </button>
+                `;
+            }
+            
+            li.innerHTML = content;
+            fileList.appendChild(li);
+        });
+
+        if (isMultiple && selectedFilesArray.length > 1) {
+            if (sortableInstance) sortableInstance.destroy();
+            sortableInstance = new Sortable(fileList, {
+                animation: 150,
+                handle: '.drag-handle',
+                ghostClass: 'sortable-ghost',
+                dragClass: 'sortable-drag',
+                onEnd: function (evt) {
+                    const itemEl = evt.item;
+                    const oldIndex = evt.oldIndex;
+                    const newIndex = evt.newIndex;
+                    
+                    // Reorder the array
+                    const movedItem = selectedFilesArray.splice(oldIndex, 1)[0];
+                    selectedFilesArray.splice(newIndex, 0, movedItem);
+                    
+                    // Re-render to update indices/buttons
+                    renderFileList();
+                }
+            });
+        }
+    }
+
+    window.removeFile = function(index) {
+        selectedFilesArray.splice(index, 1);
+        if (selectedFilesArray.length === 0) {
+            dropZone.style.display = 'block';
+            selectedFilesContainer.style.display = 'none';
+        } else {
+            renderFileList();
+        }
+        
+        if (toolRoute.includes('compress')) {
+            draftJobId = null; // Invalidate draft if files change
+            estSizeDisplay.textContent = 'Calculating...';
+            handleFiles(); // Re-trigger draft creation with new set
+        }
+    };
 
     if(toolForm) {
         toolForm.addEventListener('submit', (e) => {
             e.preventDefault();
             
+            if (selectedFilesArray.length === 0) {
+                showCustomAlert("Error", "Please select at least one file.");
+                return;
+            }
+
             uploadContainer.style.display = 'none';
             progressContainer.style.display = 'block';
             
             const isCompressionTool = toolRoute.includes('compress');
             const formData = new FormData(toolForm);
+            
+            // Remove the default 'file' or 'files' entries from FormData
+            formData.delete('file');
+            formData.delete('files');
+            
+            // Append from our ordered array
+            selectedFilesArray.forEach(file => {
+                formData.append(fileInput.name, file);
+            });
+
             const xhr = new XMLHttpRequest();
             
             if (isCompressionTool) {
@@ -407,8 +503,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
                 xhr.open('POST', toolRoute + 'process/' + draftJobId, true);
-                formData.delete('file');
-                formData.delete('files');
             } else {
                 xhr.open('POST', toolRoute, true);
             }
@@ -444,7 +538,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         .then(blob => {
                             const recordId = Date.now().toString();
                             const toolName = toolRoute.replace(/\//g, '') || 'tool';
-                            const originalName = fileInput.files[0] ? fileInput.files[0].name : 'unknown';
+                            const originalName = selectedFilesArray[0].name || 'unknown';
                             
                             const record = {
                                 id: recordId,

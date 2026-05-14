@@ -38,6 +38,14 @@
         <div class="selected-files" id="selected-files" style="display: none;">
             <ul id="file-list"></ul>
             
+            {% if multiple %}
+            <div class="add-more-container">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('file-input').click()">
+                    <i class="ph ph-plus"></i> Add More Files
+                </button>
+            </div>
+            {% endif %}
+            
             {% if needs_password %}
             <div class="extra-inputs">
                 <input type="password" name="password" placeholder="Enter password to encrypt PDF" required class="input-field">
